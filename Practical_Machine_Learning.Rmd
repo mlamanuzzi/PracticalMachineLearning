@@ -1,0 +1,91 @@
+---
+title: "Activity Monitors"
+author: "Michael Lamanuzzi"
+date: "March 21, 2015"
+output: html_document
+---
+
+###This is a title
+
+##this is a subtitle
+
+#this is ?
+
+```{r}
+library(ggplot2);library(rattle);library(caret);library(rpart.plot);library(randomForest)
+
+# load the training set (will be split into train and test sets) and final testing set (class not known)
+# Data set contains NA, "", and #DIV/0!, we will mark all of these values NA
+trainingSet <- read.csv("pml-training.csv", header=T, na.strings=c("NA","","#DIV/0!"))
+testSet <- read.csv("pml-testing.csv", header=T, na.strings=c("NA","","#DIV/0!"))
+
+# Create training and test sets from training data, 70% training, 30% testing
+inTrain <- createDataPartition(y=trainingSet$classe,
+                               p=0.7,list=FALSE)
+myTraining <- trainingSet[inTrain,]
+myTesting <- trainingSet[-inTrain,]
+
+dim(myTraining)
+dim(myTesting)
+
+# This function will "clean" the data, removing any columns that contain NA values
+# as well as as well as irrelevant (non-predictor) columns (identifiers, timestamps, etc.)
+cleanData <- function(data) {
+  # remove cols that have NAs
+  idx.keep <- !sapply(data, function(x) any(is.na(x)))
+  data <- data[, idx.keep]
+  idx.keep <- !sapply(data, function(x) any(x==""))
+  data <- data[, idx.keep]
+  
+  drops <- c("cvtd_timestamp", "new_window", "num_window","raw_timestamp_part_1", "raw_timestamp_part_2","user_name","X")
+  data <- data[,!(names(data) %in% drops)]
+  return(data)
+}
+
+
+# cleanData <- function(data) {
+#   # remove columns with NAs  
+#   data <- data[,colSums(is.na(data)) != nrow(data)]
+#   # remove non-predictors from data set
+#   drops <- c("X", "user_name", "raw_timestamp_part_1", "raw_timestamp_part_2", 
+#               "cvtd_timestamp", "new_window", "num_window")
+#   data <- data[,!(names(data) %in% drops)]
+#   return (data)
+# }
+
+myTraining <- cleanData(myTraining)
+myTraining$classe <- factor(myTraining$classe)
+myTesting <- cleanData(myTesting)
+
+# try a decision tree
+modDecTree <- rpart(classe~., data=myTraining, method="class")
+fancyRpartPlot(modDecTree)
+
+# create a random forest model from training set
+modRandomForest <- randomForest(classe~.,data=myTraining)
+pred <- predict(modRandomForest, myTesting,type="class")
+
+confusionMatrix(pred,myTesting$classe)
+```
+We can see the in-sample accuracy is 99.44%, so the out-of-sample error rate is expected to be .06%. 
+
+```{r,echo=TRUE}
+# predict testing set
+finalPredictions <- predict(modRandomForest,testSet,type="class")
+finalPredictions
+```
+The model correctly identified all 20 testing samples, so the effective error rate on that data set is 0.00%.
+
+```{r,echo=TRUE}
+# Generating files for submission
+# function from assignment
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(finalPredictions)
+```
