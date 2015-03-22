@@ -5,16 +5,14 @@ date: "March 21, 2015"
 output: html_document
 ---
 
-###This is a title
+## Background (from course website)
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
 
-##this is a subtitle
-
-#this is ?
-
-```{r}
+## Getting and Cleaning the Data
+```{r,echo=TRUE}
 library(ggplot2);library(rattle);library(caret);library(rpart.plot);library(randomForest)
 
-# load the training set (will be split into train and test sets) and final testing set (class not known)
+# load the training set (will be split into train and test sets) and final testing set
 # Data set contains NA, "", and #DIV/0!, we will mark all of these values NA
 trainingSet <- read.csv("pml-training.csv", header=T, na.strings=c("NA","","#DIV/0!"))
 testSet <- read.csv("pml-testing.csv", header=T, na.strings=c("NA","","#DIV/0!"))
@@ -25,33 +23,16 @@ inTrain <- createDataPartition(y=trainingSet$classe,
 myTraining <- trainingSet[inTrain,]
 myTesting <- trainingSet[-inTrain,]
 
-dim(myTraining)
-dim(myTesting)
+dim(myTraining);dim(myTesting)
 
-# This function will "clean" the data, removing any columns that contain NA values
-# as well as as well as irrelevant (non-predictor) columns (identifiers, timestamps, etc.)
 cleanData <- function(data) {
-  # remove cols that have NAs
-  idx.keep <- !sapply(data, function(x) any(is.na(x)))
-  data <- data[, idx.keep]
-  idx.keep <- !sapply(data, function(x) any(x==""))
-  data <- data[, idx.keep]
-  
+  # remove non-predictor columns
   drops <- c("cvtd_timestamp", "new_window", "num_window","raw_timestamp_part_1", "raw_timestamp_part_2","user_name","X")
   data <- data[,!(names(data) %in% drops)]
+  # remove cols that have NAs
+  data <- data[, colSums(is.na(data)) == 0]  
   return(data)
 }
-
-
-# cleanData <- function(data) {
-#   # remove columns with NAs  
-#   data <- data[,colSums(is.na(data)) != nrow(data)]
-#   # remove non-predictors from data set
-#   drops <- c("X", "user_name", "raw_timestamp_part_1", "raw_timestamp_part_2", 
-#               "cvtd_timestamp", "new_window", "num_window")
-#   data <- data[,!(names(data) %in% drops)]
-#   return (data)
-# }
 
 myTraining <- cleanData(myTraining)
 myTraining$classe <- factor(myTraining$classe)
@@ -60,14 +41,28 @@ myTesting <- cleanData(myTesting)
 # try a decision tree
 modDecTree <- rpart(classe~., data=myTraining, method="class")
 fancyRpartPlot(modDecTree)
+```
 
+Based on lectures, Random Forests will likely provide one of the best models for this type of data
+```{r,echo=TRUE}
 # create a random forest model from training set
 modRandomForest <- randomForest(classe~.,data=myTraining)
 pred <- predict(modRandomForest, myTesting,type="class")
-
-confusionMatrix(pred,myTesting$classe)
 ```
-We can see the in-sample accuracy is 99.44%, so the out-of-sample error rate is expected to be .06%. 
+
+Calculate confusion matrix and error rate for cross-validation
+```{r, echo=TRUE}
+cm <- confusionMatrix(pred,myTesting$classe)
+overall.accuracy <- cm$overall['Accuracy']
+
+# We can see the in-sample accuracy is: 
+overall.accuracy 
+
+# so the out-of-sample error rate is expected to be:
+errorRate <- (1-overall.accuracy)
+errorRate
+```
+
 
 ```{r,echo=TRUE}
 # predict testing set
