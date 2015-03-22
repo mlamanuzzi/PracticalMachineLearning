@@ -8,7 +8,7 @@ output: html_document
 ## Background (from course website)
 Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
 
-## Getting and Cleaning the Data
+## Cleaning the data
 ```{r,echo=TRUE}
 library(ggplot2);library(rattle);library(caret);library(rpart.plot);library(randomForest)
 
@@ -37,7 +37,10 @@ cleanData <- function(data) {
 myTraining <- cleanData(myTraining)
 myTraining$classe <- factor(myTraining$classe)
 myTesting <- cleanData(myTesting)
+```
 
+## Draw a decision tree
+```{r,echo=TRUE}
 # try a decision tree
 modDecTree <- rpart(classe~., data=myTraining, method="class")
 fancyRpartPlot(modDecTree)
@@ -50,7 +53,7 @@ modRandomForest <- randomForest(classe~.,data=myTraining)
 pred <- predict(modRandomForest, myTesting,type="class")
 ```
 
-Calculate confusion matrix and error rate for cross-validation
+##Calculate confusion matrix and error rate for cross-validation
 ```{r, echo=TRUE}
 cm <- confusionMatrix(pred,myTesting$classe)
 overall.accuracy <- cm$overall['Accuracy']
@@ -63,7 +66,7 @@ errorRate <- (1-overall.accuracy)
 errorRate
 ```
 
-
+##Create predictions for final testing set
 ```{r,echo=TRUE}
 # predict testing set
 finalPredictions <- predict(modRandomForest,testSet,type="class")
