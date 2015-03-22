@@ -49,7 +49,9 @@ fancyRpartPlot(modDecTree)
 Based on lectures, Random Forests will likely provide one of the best models for this type of data
 ```{r,echo=TRUE}
 # create a random forest model from training set
-modRandomForest <- randomForest(classe~.,data=myTraining)
+# modRandomForest <- randomForest(classe~.,data=myTraining)
+set.seed(20150322)
+modRandomForest <- train(classe~.,method="rf",data=myTraining,trControl=trainControl(method='cv'),number=5,allowParallel=TRUE)
 pred <- predict(modRandomForest, myTesting,type="class")
 ```
 
@@ -72,7 +74,7 @@ errorRate
 finalPredictions <- predict(modRandomForest,testSet,type="class")
 finalPredictions
 ```
-The model correctly identified all 20 testing samples, so the effective error rate on that data set is 0.00%.
+The model correctly categorized all 20 testing samples.
 
 ```{r,echo=TRUE}
 # Generating files for submission
